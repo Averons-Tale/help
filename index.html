@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Averon's Tale Community | Hilfe & Diskussionen</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="lib/css/styles.css">
+    <link rel="icon" href="/lib/img/averons-tale_logo.png">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-storage-compat.js"></script>
+    <style>
+        /* Community-spezifische Styles */
+        .community-container {
+            min-height: calc(100vh - 80px);
+            margin-top: 80px;
+            padding: 2rem 0;
+            background-color: var(--color-bg);
+        }
+
+        .login-overlay {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            width: 100%;
+            height: calc(100vh - 80px);
+            background-color: var(--color-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .login-message {
+            background: var(--color-card);
+            padding: 3rem;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 500px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--color-border);
+        }
+
+        .login-message h2 {
+            margin-bottom: 1rem;
+        }
+
+        .login-buttons {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .community-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .forum-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .categories {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .category-card {
+            background: var(--color-card);
+            border-radius: 12px;
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+        }
+
+        .category-header {
+            padding: 1.5rem;
+            background: rgba(0, 113, 227, 0.1);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .category-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .topics-list {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .topic-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--color-border);
+            transition: background 0.2s ease;
+        }
+
+        .topic-item:hover {
+            background: rgba(0, 113, 227, 0.05);
+        }
+
+        .topic-item:last-child {
+            border-bottom: none;
+        }
+
+        .topic-main {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .topic-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--color-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-primary);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .topic-content {
+            flex: 1;
+        }
+
+        .topic-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+            display: block;
+            text-decoration: none;
+        }
+
+        .topic-title:hover {
+            text-decoration: underline;
+        }
+
+        .topic-excerpt {
+            color: var(--color-text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .topic-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+
+        .topic-stats {
+            display: flex;
+            gap: 1.5rem;
+            margin-left: auto;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .new-topic-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .new-topic-form {
+            background: var(--color-card);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--color-border);
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .image-preview {
+            margin-top: 1rem;
+            max-width: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--color-text-secondary);
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 3rem;
+            color: var(--color-text-secondary);
+        }
+
+        .user-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(0, 113, 227, 0.1);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 768px) {
+            .topic-main {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .topic-stats {
+                margin-left: 0;
+                justify-content: flex-start;
+            }
+            
+            .new-topic-form {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="theme-transition">
+        <header class="glass-header">
+            <div class="container">
+                <a href="/" class="logo">
+                    <span class="logo-icon"><i class="fas fa-hourglass"></i></span>
+                    <h1>Averon's Tale</h1>
+                </a>
+                <nav>
+                    <button class="menu-toggle" id="menuToggle" aria-label="Menü">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+                    <ul class="nav-links" id="navLinks">
+                        <li><a href="/">Home</a></li>
+                        <li><a href="https://help.averons-tale.net" class="active">Community</a></li>
+                        <li><a href="https://help.averons-tale.net#faq">FAQ</a></li>
+                        <li id="authButtons">
+                            <!-- Wird durch JS gefüllt -->
+                        </li>
+                        <li>
+                            <button class="theme-toggle" id="themeToggle" aria-label="Theme wechseln">
+                                <i class="fas fa-moon"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <main class="community-container">
+            <!-- Login Overlay für nicht eingeloggte Nutzer -->
+            <div id="loginOverlay" class="login-overlay">
+                <div class="login-message">
+                    <h2>Community-Zugang</h2>
+                    <p>Um auf die Community zugreifen zu können, musst du dich mit deinem Averon's Tale Konto anmelden.</p>
+                    <div class="login-buttons">
+                        <a href="https://login.averons-tale.net?redirect=help.averons-tale.net" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Zum Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hauptinhalt für eingeloggte Nutzer -->
+            <div id="communityContent" class="community-content" style="display: none;">
+                <div class="forum-header">
+                    <h2><i class="fas fa-users"></i> Averon's Tale Community</h2>
+                    <button id="newTopicBtn" class="btn btn-primary new-topic-btn">
+                        <i class="fas fa-plus"></i> Neues Thema
+                    </button>
+                </div>
+
+                <!-- Neue Thema Formular -->
+                <div id="newTopicForm" class="new-topic-form">
+                    <div class="form-group">
+                        <label for="topicCategory" class="form-label">Kategorie</label>
+                        <select id="topicCategory" class="form-control">
+                            <option value="general">Allgemeine Fragen</option>
+                            <option value="technical">Technische Probleme</option>
+                            <option value="gameplay">Gameplay Fragen</option>
+                            <option value="suggestions">Vorschläge & Ideen</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="topicTitle" class="form-label">Thementitel</label>
+                        <input type="text" id="topicTitle" class="form-control" placeholder="Gib deinem Thema einen klaren Titel">
+                    </div>
+                    <div class="form-group">
+                        <label for="topicContent" class="form-label">Inhalt</label>
+                        <textarea id="topicContent" class="form-control" rows="8" placeholder="Beschreibe dein Problem oder deine Frage ausführlich"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="topicImage" class="form-label">Bild anhängen (optional)</label>
+                        <input type="file" id="topicImage" accept="image/*" class="form-control">
+                        <div class="image-preview" id="imagePreview"></div>
+                    </div>
+                    <div class="form-actions">
+                        <button id="cancelTopicBtn" class="btn btn-outline">Abbrechen</button>
+                        <button id="submitTopicBtn" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Thema erstellen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Kategorien und Themen -->
+                <div class="categories">
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-icon">
+                                <i class="fas fa-question-circle"></i>
+                            </div>
+                            <h3>Allgemeine Fragen</h3>
+                        </div>
+                        <ul class="topics-list" id="generalTopics">
+                            <!-- Themen werden hier eingefügt -->
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Lade Themen...
+                            </div>
+                        </ul>
+                    </div>
+
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-icon">
+                                <i class="fas fa-bug"></i>
+                            </div>
+                            <h3>Technische Probleme</h3>
+                        </div>
+                        <ul class="topics-list" id="technicalTopics">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Lade Themen...
+                            </div>
+                        </ul>
+                    </div>
+
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-icon">
+                                <i class="fas fa-gamepad"></i>
+                            </div>
+                            <h3>Gameplay Fragen</h3>
+                        </div>
+                        <ul class="topics-list" id="gameplayTopics">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Lade Themen...
+                            </div>
+                        </ul>
+                    </div>
+
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <h3>Vorschläge & Ideen</h3>
+                        </div>
+                        <ul class="topics-list" id="suggestionsTopics">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Lade Themen...
+                            </div>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ Section -->
+                <section id="faq" class="section dark">
+                    <div class="container">
+                        <h2 class="section-title">Häufig gestellte Fragen</h2>
+                        <div class="faq-grid">
+                            <div class="faq-card">
+                                <div class="faq-question">
+                                    <h4>Wie installiere ich das Spiel?</h4>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="faq-answer">
+                                    <p>Lade die neueste Version von unserer Website herunter und folge den Installationsanweisungen für dein Betriebssystem.</p>
+                                </div>
+                            </div>
+                            <!-- Weitere FAQ Items -->
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer class="main-footer">
+            <div class="container">
+                <div class="footer-grid">
+                    <div class="footer-brand">
+                        <div class="logo">
+                            <span class="logo-icon"><img src="/lib/img/averons-tale_logo.png" height="100px" width="100px" style="border-radius: 15px;"></span>
+                            <h2>Averon's Tale</h2>
+                        </div>
+                        <p>Ein revolutionäres Adventure-Game mit Zeitreise-Mechanik</p>
+                    </div>
+                    <div class="footer-links">
+                        <h3>Community</h3>
+                        <ul>
+                            <li><a href="https://help.averons-tale.net">Hilfe-Forum</a></li>
+                            <li><a href="https://discord.gg/MPV2GHbkzb">Discord</a></li>
+                            <li><a href="https://help.averons-tale.net#faq">FAQ</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-links">
+                        <h3>Rechtliches</h3>
+                        <ul>
+                            <li><a href="/nutzungsbedingungen.html">Nutzungsbedingungen</a></li>
+                            <li><a href="/datenschutz.html">Datenschutz</a></li>
+                            <li><a href="/impressum.html">Impressum</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-social">
+                        <h3>Folge uns</h3>
+                        <div class="social-icons">
+                            <a href="https://twitter.com"><i class="fab fa-twitter"></i></a>
+                            <a href="https://discord.gg/MPV2GHbkzb"><i class="fab fa-discord"></i></a>
+                            <a href="https://youtube.com"><i class="fab fa-youtube"></i></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2025 Averon's Tale. Alle Rechte vorbehalten.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="/lib/js/script.js"></script>
+    <script>
+        // Firebase Initialisierung mit deinen Daten
+        const firebaseConfig = {
+            apiKey: "AIzaSyYOUR_API_KEY",
+            authDomain: "averons-tale.firebaseapp.com",
+            projectId: "averons-tale",
+            storageBucket: "averons-tale.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abcdef1234567890"
+        };
+
+        // Firebase initialisieren
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // Cross-Domain Auth Handling
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // Nutzer ist eingeloggt
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('communityContent').style.display = 'block';
+                
+                // Auth-Buttons anzeigen
+                const authButtons = document.getElementById('authButtons');
+                authButtons.innerHTML = `
+                    <button id="logoutBtn" class="btn btn-outline">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                `;
+                
+                // Logout-Event hinzufügen
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    auth.signOut().then(() => {
+                        window.location.href = 'https://login.averons-tale.net/logout?redirect=help.averons-tale.net';
+                    });
+                });
+                
+                // Themen laden
+                loadTopics();
+            } else {
+                // Nutzer ist nicht eingeloggt
+                document.getElementById('loginOverlay').style.display = 'flex';
+                document.getElementById('communityContent').style.display = 'none';
+                
+                // Auth-Buttons anzeigen
+                const authButtons = document.getElementById('authButtons');
+                authButtons.innerHTML = `
+                    <a href="https://login.averons-tale.net?redirect=help.averons-tale.net" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                `;
+            }
+        });
+
+        // Prüfen ob Nutzer eingeloggt ist (für Cross-Domain)
+        function checkAuthState() {
+            auth.onAuthStateChanged(user => {
+                if (!user) {
+                    // Wenn nicht eingeloggt, versuche den Auth-State zu prüfen
+                    auth.getRedirectResult().then(result => {
+                        if (result.user) {
+                            // Nutzer wurde durch Redirect eingeloggt
+                            window.location.reload();
+                        }
+                    }).catch(error => {
+                        console.error('Auth error:', error);
+                    });
+                }
+            });
+        }
+
+        // Initiale Prüfung
+        checkAuthState();
+    </script>
+</body>
+</html>
